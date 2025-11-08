@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 from youtube_client import YouTubeClient
 from plex_parser import PlexWebhookParser
+from plex_client import PlexClient
 
 # Load environment variables
 load_dotenv()
@@ -14,9 +15,13 @@ WEBHOOK_PORT = int(os.getenv('WEBHOOK_PORT', 5000))
 MIN_WATCH_PERCENTAGE = int(os.getenv('MIN_WATCH_PERCENTAGE', 90))
 YOUTUBE_COOKIES_FILE = os.getenv('YOUTUBE_COOKIES_FILE', 'cookies.txt')
 PLEX_LIBRARY_FILTER = os.getenv('PLEX_LIBRARY_FILTER', '').split(',') if os.getenv('PLEX_LIBRARY_FILTER') else []
+PLEX_URL = os.getenv('PLEX_URL', 'http://localhost:32400')
+PLEX_TOKEN = os.getenv('PLEX_TOKEN')
 
 # Initialize YouTube client
 youtube_client = None
+plex_client = None
+plex_parser = None
 
 def init_youtube_client():
     """Initialize YouTube client lazily using yt-dlp with cookies"""
@@ -30,6 +35,27 @@ def init_youtube_client():
             print("Please ensure your YouTube cookies file is present and valid.")
             raise
     return youtube_client
+
+def init_plex_client():
+    """Initialize Plex client for fetching media metadata"""
+    global plex_client
+    if plex_client is None and PLEX_TOKEN:
+        try:
+            plex_client = PlexClient(PLEX_URL, PLEX_TOKEN)
+            print(f"Plex client initialized: {PLEX_URL}")
+        except Exception as e:
+            print(f"Warning: Could not initialize Plex client: {e}")
+            print("Will attempt to extract YouTube ID from webhook payload only")
+            plex_client = None
+    return plex_client
+
+def get_plex_parser():
+    """Get or create PlexWebhookParser instance"""
+    global plex_parser
+    if plex_parser is None:
+        client = init_plex_client()
+        plex_parser = PlexWebhookParser(plex_client=client)
+    return plex_parser
 
 @app.route('/')
 def index():
@@ -51,6 +77,9 @@ def plex_webhook():
         payload = PlexWebhookParser.parse_payload(request.form)
         if not payload:
             return jsonify({'status': 'error', 'message': 'Invalid payload'}), 400
+        
+        # Get parser instance with Plex client
+        parser = get_plex_parser()
         
         # Get video info for logging
         video_info = PlexWebhookParser.get_video_info(payload)
@@ -77,7 +106,7 @@ def plex_webhook():
             return jsonify({'status': 'skipped', 'reason': 'not_watched'}), 200
         
         # Extract YouTube video ID
-        youtube_id = PlexWebhookParser.extract_youtube_id(payload)
+        youtube_id = parser.extract_youtube_id(payload)
         if not youtube_id:
             print("Warning: Could not extract YouTube video ID from metadata")
             print("This may not be a YouTube video, or the ID is not stored in metadata")
@@ -155,6 +184,19 @@ if __name__ == '__main__':
     print(f"Min watch percentage: {MIN_WATCH_PERCENTAGE}%")
     if PLEX_LIBRARY_FILTER:
         print(f"Library filter: {', '.join(PLEX_LIBRARY_FILTER)}")
+    
+    # Initialize Plex client at startup to verify connection
+    if PLEX_TOKEN:
+        try:
+            init_plex_client()
+            print(f"✓ Plex server connected: {PLEX_URL}")
+        except Exception as e:
+            print(f"✗ Warning: Could not connect to Plex server")
+            print(f"  Will attempt to extract YouTube ID from webhook only")
+    else:
+        print("✗ Warning: PLEX_TOKEN not set")
+        print("  Set PLEX_TOKEN in .env to enable direct Plex server access")
+    
     print("="*60 + "\n")
     
     # Run the Flask app

@@ -5,6 +5,15 @@ from urllib.parse import parse_qs, urlparse
 class PlexWebhookParser:
     """Parser for Plex webhook payloads"""
     
+    def __init__(self, plex_client=None):
+        """
+        Initialize parser with optional Plex client for fetching media data
+        
+        Args:
+            plex_client: PlexClient instance for fetching media metadata from server
+        """
+        self.plex_client = plex_client
+    
     @staticmethod
     def parse_payload(form_data):
         """Parse the multipart form data from Plex webhook"""
@@ -49,8 +58,47 @@ class PlexWebhookParser:
         
         return False
     
+    def get_rating_key(self, payload):
+        """
+        Extract the rating key from Plex webhook payload
+        Rating key is needed to fetch media data from Plex server
+        
+        Args:
+            payload: Parsed webhook payload
+            
+        Returns:
+            str: Rating key or None
+        """
+        metadata = payload.get('Metadata', {})
+        return metadata.get('ratingKey')
+    
+    def extract_youtube_id(self, payload):
+        """
+        Extract YouTube video ID from Plex metadata
+        
+        If plex_client is available, fetches media file paths from Plex server
+        using the rating key. Otherwise, tries to extract from webhook payload.
+        
+        Args:
+            payload: Parsed webhook payload
+            
+        Returns:
+            str: YouTube video ID or None
+        """
+        # Method 1: Use Plex client to fetch media data directly from server
+        if self.plex_client:
+            rating_key = self.get_rating_key(payload)
+            if rating_key:
+                youtube_id = self.plex_client.get_youtube_id_from_rating_key(rating_key)
+                if youtube_id:
+                    return youtube_id
+        
+        # Method 2: Try to extract from webhook payload (fallback)
+        # This may not work if webhook doesn't include media data
+        return self._extract_youtube_id_from_webhook(payload)
+    
     @staticmethod
-    def extract_youtube_id(payload):
+    def _extract_youtube_id_from_webhook(payload):
         """
         Extract YouTube video ID from Plex metadata
         Tries multiple methods to find the YouTube video ID
