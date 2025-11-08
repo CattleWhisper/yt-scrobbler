@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+venv/
+env/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Environment files (these should be mounted or passed as secrets)
+.env
+.env.local
+
+# Credentials (should be mounted as volumes)
+client_secrets.json
+*.json
+credentials/
+
+# Cookies files (should be mounted as volumes)
+*.txt
+!requirements.txt
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# Documentation
+*.md
+!README.md
+
+# GitHub
+.github/
+
+# Docker
+docker-compose.yml
+Dockerfile
+.dockerignore
