@@ -32,14 +32,15 @@ class PlexClient:
         Fetch complete media metadata from Plex server using rating key
         
         Args:
-            rating_key: The unique rating key for the media item
+            rating_key: The unique rating key for the media item (can be string or int)
             
         Returns:
             dict: Media metadata including file paths
         """
         try:
-            # Fetch the media item
-            media_item = self.server.fetchItem(rating_key)
+            # Fetch the media item - convert rating_key to int if it's a string
+            rating_key_int = int(rating_key) if isinstance(rating_key, str) else rating_key
+            media_item = self.server.fetchItem(rating_key_int)
             
             # Extract relevant information
             metadata = {
