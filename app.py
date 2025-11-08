@@ -12,29 +12,22 @@ app = Flask(__name__)
 # Configuration
 WEBHOOK_PORT = int(os.getenv('WEBHOOK_PORT', 5000))
 MIN_WATCH_PERCENTAGE = int(os.getenv('MIN_WATCH_PERCENTAGE', 90))
-YOUTUBE_CLIENT_SECRETS = os.getenv('YOUTUBE_CLIENT_SECRETS_FILE', 'client_secrets.json')
-YOUTUBE_COOKIES_FILE = os.getenv('YOUTUBE_COOKIES_FILE', None)
+YOUTUBE_COOKIES_FILE = os.getenv('YOUTUBE_COOKIES_FILE', 'cookies.txt')
 PLEX_LIBRARY_FILTER = os.getenv('PLEX_LIBRARY_FILTER', '').split(',') if os.getenv('PLEX_LIBRARY_FILTER') else []
 
 # Initialize YouTube client
 youtube_client = None
 
 def init_youtube_client():
-    """Initialize YouTube client lazily"""
+    """Initialize YouTube client lazily using yt-dlp with cookies"""
     global youtube_client
     if youtube_client is None:
         try:
-            # Prefer cookies file if provided, otherwise use OAuth
-            if YOUTUBE_COOKIES_FILE and os.path.exists(YOUTUBE_COOKIES_FILE):
-                youtube_client = YouTubeClient(cookies_file=YOUTUBE_COOKIES_FILE)
-                print("YouTube client initialized with cookies")
-            else:
-                youtube_client = YouTubeClient(YOUTUBE_CLIENT_SECRETS)
-                print("YouTube client initialized with OAuth")
+            youtube_client = YouTubeClient(cookies_file=YOUTUBE_COOKIES_FILE)
+            print("YouTube client initialized with yt-dlp using cookies")
         except Exception as e:
             print(f"Error initializing YouTube client: {e}")
-            if not YOUTUBE_COOKIES_FILE:
-                print("Please ensure you have set up your OAuth credentials or provide a cookies file.")
+            print("Please ensure your YouTube cookies file is present and valid.")
             raise
     return youtube_client
 
