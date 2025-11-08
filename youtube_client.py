@@ -1,12 +1,14 @@
 import os
 import re
+import shutil
+import tempfile
 import yt_dlp
 
 class YouTubeClient:
     """Client for interacting with YouTube using yt-dlp"""
     
     def __init__(self, cookies_file=None):
-        self.cookies_file = cookies_file
+        self.original_cookies_file = cookies_file
         
         if not cookies_file or not os.path.exists(cookies_file):
             raise FileNotFoundError(
@@ -14,7 +16,20 @@ class YouTubeClient:
                 "Please export your YouTube cookies using a browser extension."
             )
         
-        print(f"Using cookies from {cookies_file}")
+        # Create a writable copy of the cookies file in a temporary directory
+        # This is necessary because yt-dlp may need to write to the cookies file,
+        # and the original file might be on a readonly filesystem
+        temp_dir = tempfile.gettempdir()
+        cookies_filename = os.path.basename(cookies_file)
+        self.cookies_file = os.path.join(temp_dir, f"yt_scrobbler_{cookies_filename}")
+        
+        try:
+            shutil.copy2(cookies_file, self.cookies_file)
+            print(f"Copied cookies from {cookies_file} to {self.cookies_file}")
+        except Exception as e:
+            print(f"Warning: Could not copy cookies file: {e}")
+            print(f"Using original cookies file: {cookies_file}")
+            self.cookies_file = cookies_file
     
     def extract_video_id(self, url_or_id):
         """Extract YouTube video ID from various formats"""
