@@ -75,8 +75,10 @@ class YouTubeClient:
                 'cookiefile': self.cookies_file,
                 'mark_watched': True,  # Mark video as watched
                 'skip_download': True,  # Don't download the video
+                'extract_flat': True,  # Don't extract full video info
                 'quiet': not debug,  # Show output only in debug mode
                 'no_warnings': not debug,
+                'ignoreerrors': True,  # Continue even if there are errors
             }
             
             if debug:
@@ -86,7 +88,8 @@ class YouTubeClient:
             
             # Use yt-dlp to mark the video as watched
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([video_url])
+                # Extract info without downloading to trigger the mark_watched
+                ydl.extract_info(video_url, download=False)
             
             print(f"Successfully marked video {video_id} as watched")
             return True
