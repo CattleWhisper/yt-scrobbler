@@ -37,7 +37,10 @@ class PlexWebhookParser:
     def is_video_watched(payload, min_percentage=90):
         """
         Determine if the video was watched based on the event type
-        and watch progress
+        
+        Plex sends 'media.scrobble' events when a video is considered "watched"
+        (typically at 90% completion). The webhook doesn't include viewOffset 
+        or duration, so we rely on the event type.
         """
         event = payload.get('event')
         
@@ -45,16 +48,6 @@ class PlexWebhookParser:
         # Plex sends this when a video is considered "watched"
         if event == 'media.scrobble':
             return True
-        
-        # Alternatively, check 'media.stop' with high completion
-        if event == 'media.stop':
-            metadata = payload.get('Metadata', {})
-            view_offset = metadata.get('viewOffset', 0)
-            duration = metadata.get('duration', 0)
-            
-            if duration > 0:
-                percentage = (view_offset / duration) * 100
-                return percentage >= min_percentage
         
         return False
     
